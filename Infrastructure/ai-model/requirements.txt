@@ -1,0 +1,9 @@
+kafka-python
+influxdb-client[ciso]
+
+darts
+pandas
+scikit-learn
+numpy
+xgboost
+lightgbm

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Map Service</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a1a;
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .page-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 32px;
+      color: #ffffff;
+      text-align: center;
+    }
+
+    .controls-panel {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .control-group { margin-bottom: 16px; }
+    .control-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #cccccc;
+      font-weight: 500;
+    }
+
+    .control-input {
+      width: 100%;
+      padding: 12px;
+      background: #404040;
+      border: 1px solid #555;
+      border-radius: 6px;
+      color: #ffffff;
+    }
+
+    .control-button {
+      background: #6b46c1;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-right: 12px;
+    }
+
+    .control-button:hover { background: #5b21b6; }
+    .control-button.secondary { background: #404040; }
+    .control-button.secondary:hover { background: #555; }
+
+    .map-container {
+      background: #2d2d2d;
+      border-radius: 12px;
+      height: 600px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      z-index: 0;
+    }
+
+    .legend {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .legend-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #ffffff;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin-right: 12px;
+    }
+
+    .legend-text { color: #cccccc; }
+
+    .status {
+      margin-top: 12px;
+      color: #aaa;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="page-title">Map Service & Data Analytics</h1>
+    
+    <div class="controls-panel">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+        <div class="control-group">
+          <label class="control-label">Wildfire Types</label>
+          <select class="control-input" id="fire-types">
+            <option value="Wildfire">Wildfire</option>
+            <option value="Agricultural">Agricultural</option>
+            <option value="Controlled">Controlled</option>
+            <option value="Reignition">Reignition</option>
+            <option value="Small">Small</option>
+            <option value="AI_Generated">AI Generated</option>
+          </select>
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label">Start Date</label>
+          <input type="date" class="control-input" id="start-date" value="2013-07-01">
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label">End Date</label>
+          <input type="date" class="control-input" id="end-date" value="2021-12-31">
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label">Actions</label>
+          <div>
+            <button class="control-button" onclick="loadMapData()">Load Data</button>
+            <button class="control-button secondary" onclick="clearMap()">Clear</button>
+          </div>
+          <div class="status" id="status-text">Waiting for action...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Leaflet Map
+    const map = L.map('map', {
+      center: [39.5, -8.5],
+      zoom: 7,
+      scrollWheelZoom: false // disables zooming with the mouse wheel
+    });
+
+    const legend = L.control({ position: 'bottomleft' });
+
+    legend.onAdd = function (map) {
+      const div = L.DomUtil.create('div', 'legend');
+      div.innerHTML = `
+        <div class="legend-title">Fire Intensity Legend</div>
+        <div class="legend-item"><div class="legend-color" style="background:#8B0000;"></div><div class="legend-text">≥250: Very High</div></div>
+        <div class="legend-item"><div class="legend-color" style="background:#ff4500;"></div><div class="legend-text">≥100: High</div></div>
+        <div class="legend-item"><div class="legend-color" style="background:#ffa500;"></div><div class="legend-text">≥75: Moderate</div></div>
+        <div class="legend-item"><div class="legend-color" style="background:#ffff00;"></div><div class="legend-text">≥50: Low</div></div>
+        <div class="legend-item"><div class="legend-color" style="background:#00ff00;"></div><div class="legend-text">&lt;50: Very Low</div></div>
+      `;
+      return div;
+    };
+    legend.addTo(map)
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const dataLayer = L.layerGroup().addTo(map);
+    const statusText = document.getElementById('status-text');
+
+    async function loadMapData() {
+      dataLayer.clearLayers();
+      statusText.textContent = "Loading wildfire data...";
+
+      const fireType = document.getElementById('fire-types').value;
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+
+      try {
+        const apiUrl = `/api/wildfire??types=${fireType}&min_year=2013&max_year=2022`;
+        const res = await fetch(apiUrl);
+        const json = await res.json();
+        console.log("Map output:", json)
+
+        if (json.status !== "ok") throw new Error(json.message);
+        const data = json.data;
+
+        if (data.length === 0) {
+          statusText.textContent = "No wildfire data found for the selected range.";
+          return;
+        }
+
+        data.forEach(fire => {
+          const lat = fire.LATITUDE;
+          const lng = fire.LONGITUDE;
+          const fwi = fire.FWI || 0;
+
+          if (!lat || !lng) return;
+
+          let color = "#00ff00";
+          if (fwi >= 250) color = "#8B0000";
+          else if (fwi >= 100) color = "#ff4500";
+          else if (fwi >= 75) color = "#ffa500";
+          else if (fwi >= 50) color = "#ffff00";
+
+          L.circleMarker([lat, lng], {
+            radius: 6,
+            color: color,
+            fillOpacity: 0.8
+          })
+          .bindTooltip(`FWI: ${fwi}<br>Lat: ${lat}, Lng: ${lng}`)
+          .addTo(dataLayer);
+        });
+
+        statusText.textContent = `Loaded ${data.length} wildfires (${fireType})`;
+
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = "Error loading wildfire data.";
+      }
+    }
+
+    function clearMap() {
+      dataLayer.clearLayers();
+      statusText.textContent = "Map cleared.";
+    }
+  </script>
+</body>
+</html>

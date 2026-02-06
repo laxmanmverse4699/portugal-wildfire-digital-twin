@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Part & Analytics</title>
+  <link rel="stylesheet" href="/static/css/styling.css" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a1a;
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .page-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 32px;
+      color: #ffffff;
+    }
+
+    .ai-status-panel {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 12px;
+    }
+
+    .status-indicator.active {
+      background: #10b981;
+    }
+
+    .status-indicator.inactive {
+      background: #ef4444;
+    }
+
+    .status-indicator.warning {
+      background: #f59e0b;
+    }
+
+    .ai-controls {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .control-group {
+      margin-bottom: 16px;
+    }
+
+    .control-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #cccccc;
+      font-weight: 500;
+    }
+
+    .control-input {
+      width: 100%;
+      padding: 12px;
+      background: #404040;
+      border: 1px solid #555;
+      border-radius: 6px;
+      color: #ffffff;
+    }
+
+    .control-button {
+      background: #6b46c1;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-right: 12px;
+    }
+
+    .control-button:hover {
+      background: #5b21b6;
+    }
+
+    .control-button.success {
+      background: #10b981;
+    }
+
+    .control-button.success:hover {
+      background: #059669;
+    }
+
+    .chart-card {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .chart-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #ffffff;
+    }
+
+    .chart-container {
+      height: 400px;
+      width: 100%;
+    }
+
+    .ai-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .feature-list {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 8px 0;
+    }
+
+    .feature-icon {
+      width: 24px;
+      height: 24px;
+      margin-right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #6b46c1;
+      border-radius: 50%;
+      font-size: 12px;
+    }
+
+    .feature-text {
+      color: #cccccc;
+    }
+
+    @media (max-width: 768px) {
+      .ai-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="page-title">AI Part & Analytics</h1>
+    
+    <!-- AI Status Panel -->
+    <div class="ai-status-panel">
+      <div class="status-item">
+        <div class="status-indicator active"></div>
+        <span>AI Model Status: <strong>Active</strong></span>
+      </div>
+      <div class="status-item">
+        <div class="status-indicator active"></div>
+        <span>Prediction Engine: <strong>Ready</strong></span>
+      </div>
+      <div class="status-item">
+        <div class="status-indicator warning"></div>
+        <span>Training Data: <strong>Updating</strong></span>
+      </div>
+      <div class="status-item">
+        <div class="status-indicator active"></div>
+        <span>API Endpoints: <strong>Online</strong></span>
+      </div>
+    </div>
+
+    <!-- AI Controls -->
+    <div class="ai-controls">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+        <div class="control-group">
+          <label class="control-label">Prediction Model</label>
+          <select class="control-input" id="model-select">
+            <option value="fire-risk">Fire Risk Assessment</option>
+            <option value="spread-prediction">Spread Prediction</option>
+            <option value="evacuation">Evacuation Planning</option>
+            <option value="weather-impact">Weather Impact Analysis</option>
+          </select>
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label">Confidence Threshold</label>
+          <input type="range" class="control-input" min="0.5" max="0.95" step="0.05" value="0.8" id="confidence-slider">
+          <div style="color: #888; font-size: 12px; margin-top: 4px;">
+            Confidence: <span id="confidence-value">80%</span>
+          </div>
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label">Time Horizon</label>
+          <select class="control-input" id="time-horizon">
+            <option value="1h">1 Hour</option>
+            <option value="6h">6 Hours</option>
+            <option value="24h">24 Hours</option>
+            <option value="72h">72 Hours</option>
+          </select>
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label">Actions</label>
+          <div>
+            <button class="control-button success" onclick="runAIAnalysis()">Run Analysis</button>
+            <button class="control-button" onclick="generateReport()">Generate Report</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Features and Charts -->
+    <div class="ai-grid">
+      <div class="feature-list">
+        <h3 style="margin-bottom: 16px; color: #ffffff;">Available AI Features</h3>
+        
+        <div class="feature-item">
+          <div class="feature-icon">🔥</div>
+          <div class="feature-text">Fire Risk Assessment</div>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">📈</div>
+          <div class="feature-text">Spread Prediction Modeling</div>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">🚨</div>
+          <div class="feature-text">Evacuation Route Planning</div>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">🌤️</div>
+          <div class="feature-text">Weather Impact Analysis</div>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">🎯</div>
+          <div class="feature-text">Resource Optimization</div>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">📊</div>
+          <div class="feature-text">Pattern Recognition</div>
+        </div>
+      </div>
+      
+      <div class="chart-card">
+        <div class="chart-title">AI Predictions</div>
+        <div id="predictions-chart" class="chart-container"></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Model Performance Metrics</div>
+      <div id="performance-chart" class="chart-container"></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Risk Assessment Heatmap</div>
+      <div id="risk-heatmap" class="chart-container"></div>
+    </div>
+  </div>
+
+  <script>
+    function runAIAnalysis() {
+      const model = document.getElementById('model-select').value;
+      const confidence = document.getElementById('confidence-slider').value;
+      const timeHorizon = document.getElementById('time-horizon').value;
+      
+      console.log('Running AI Analysis:', { model, confidence, timeHorizon });
+      
+      // Simulate AI analysis
+      setTimeout(() => {
+        updateCharts();
+        alert(`AI Analysis completed for ${model} with ${(confidence * 100).toFixed(0)}% confidence over ${timeHorizon}`);
+      }, 2000);
+    }
+
+    function generateReport() {
+      alert('Generating comprehensive AI report...');
+    }
+
+    function updateCharts() {
+      // AI Predictions Chart
+      const predictionsData = [{
+        x: ['Low Risk', 'Medium Risk', 'High Risk', 'Critical'],
+        y: [Math.floor(Math.random() * 20) + 5, Math.floor(Math.random() * 15) + 3, Math.floor(Math.random() * 10) + 2, Math.floor(Math.random() * 5) + 1],
+        type: 'bar',
+        marker: { 
+          color: ['#10b981', '#f59e0b', '#ef4444', '#dc2626'],
+          gradient: {
+            type: 'vertical',
+            color: ['#10b981', '#dc2626']
+          }
+        }
+      }];
+      
+      const predictionsLayout = {
+        title: 'Risk Level Predictions',
+        xaxis: { color: '#ffffff' },
+        yaxis: { color: '#ffffff' },
+        plot_bgcolor: 'transparent',
+        paper_bgcolor: 'transparent',
+        font: { color: '#ffffff' }
+      };
+      
+      Plotly.newPlot('predictions-chart', predictionsData, predictionsLayout, {responsive: true});
+      
+      // Performance Metrics Chart
+      const performanceData = [{
+        x: ['Accuracy', 'Precision', 'Recall', 'F1-Score'],
+        y: [0.92, 0.88, 0.85, 0.86],
+        type: 'scatter',
+        mode: 'markers+lines',
+        marker: { size: 15, color: '#8b5cf6' },
+        line: { color: '#8b5cf6', width: 3 }
+      }];
+      
+      const performanceLayout = {
+        title: 'Model Performance',
+        xaxis: { color: '#ffffff' },
+        yaxis: { color: '#ffffff', range: [0, 1] },
+        plot_bgcolor: 'transparent',
+        paper_bgcolor: 'transparent',
+        font: { color: '#ffffff' }
+      };
+      
+      Plotly.newPlot('performance-chart', performanceData, performanceLayout, {responsive: true});
+      
+      // Risk Heatmap
+      const heatmapData = [{
+        z: Array.from({length: 10}, () => Array.from({length: 10}, () => Math.random())),
+        type: 'heatmap',
+        colorscale: [
+          [0, '#10b981'],
+          [0.5, '#f59e0b'],
+          [1, '#ef4444']
+        ]
+      }];
+      
+      const heatmapLayout = {
+        title: 'Risk Assessment Heatmap',
+        xaxis: { color: '#ffffff' },
+        yaxis: { color: '#ffffff' },
+        plot_bgcolor: 'transparent',
+        paper_bgcolor: 'transparent',
+        font: { color: '#ffffff' }
+      };
+      
+      Plotly.newPlot('risk-heatmap', heatmapData, heatmapLayout, {responsive: true});
+    }
+
+    // Confidence slider update
+    document.getElementById('confidence-slider').addEventListener('input', function() {
+      document.getElementById('confidence-value').textContent = Math.round(this.value * 100) + '%';
+    });
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCharts();
+    });
+  </script>
+</body>
+</html>

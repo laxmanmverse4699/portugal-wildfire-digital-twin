@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wildfire Dashboard</title>
+  <link rel="stylesheet" href="/static/css/styling.css" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a1a;
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .page-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 32px;
+      color: #ffffff;
+    }
+
+    /* Controls Panel Styles */
+    .controls-panel {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .control-group {
+      margin-bottom: 16px;
+    }
+
+    .control-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #cccccc;
+      font-weight: 500;
+    }
+
+    .control-input {
+      width: 100%;
+      padding: 12px;
+      background: #404040;
+      border: 1px solid #555;
+      border-radius: 6px;
+      color: #ffffff;
+    }
+
+    .control-button {
+      background: #6b46c1;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-right: 12px;
+    }
+
+    .control-button:hover {
+      background: #5b21b6;
+    }
+
+    .control-button.secondary {
+      background: #404040;
+    }
+
+    .control-button.secondary:hover {
+      background: #555;
+    }
+
+    /* KPI Cards Styles */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .metric-card {
+      background: linear-gradient(135deg, #6b46c1, #8b5cf6);
+      border-radius: 12px;
+      padding: 24px;
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .metric-card.teal {
+      background: linear-gradient(135deg, #0d9488, #14b8a6);
+    }
+
+    .metric-card.orange {
+      background: linear-gradient(135deg, #ea580c, #f97316);
+    }
+
+    .metric-label {
+      font-size: 18px;
+      opacity: 0.9;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .metric-value {
+      font-size: 36px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .metric-change {
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      font-weight: 500;
+    }
+
+    .metric-change.positive {
+      color: #10b981;
+    }
+
+    .metric-change.negative {
+      color: #ef4444;
+    }
+
+    /* Chart Styles */
+    .chart-card {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      margin-bottom: 32px;
+    }
+
+    .chart-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #ffffff;
+    }
+
+    .chart-container {
+      height: 400px;
+      width: 100%;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: #888;
+      font-size: 16px;
+    }
+
+    .error {
+      color: #ef4444;
+      text-align: center;
+      padding: 20px;
+      background: #2d2d2d;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .charts-row {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1 class="page-title">Wildfire Dashboard</h1>
+
+    <!-- Controls Panel -->
+    <div class="controls-panel">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+        <div class="control-group">
+          <label class="control-label">Wildfire Types</label>
+          <select class="control-input" id="fire-types">
+            <option value="Wildfire">Wildfire</option>
+            <option value="Agricultural">Agricultural</option>
+            <option value="Controlled">Controlled</option>
+            <option value="Reignition">Reignition</option>
+            <option value="Small">Small Fire</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Start Date</label>
+          <input type="date" class="control-input" id="start-date" value="2013-01-01">
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">End Date</label>
+          <input type="date" class="control-input" id="end-date" value="2021-12-31">
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Actions</label>
+          <div>
+            <button class="control-button" onclick="loadDashboardData()">Load</button>
+            <button class="control-button secondary" onclick="resetFilters()">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="dashboard-grid">
+      <div class="metric-card">
+        <div class="metric-label">Total Wildfires</div>
+        <div class="metric-value" id="total-fires">-</div>
+        <div class="metric-change positive">Historical Data</div>
+      </div>
+
+      <div class="metric-card teal">
+        <div class="metric-label">Avg Temperature (°C)</div>
+        <div class="metric-value" id="avg-temp">-</div>
+        <div class="metric-change">Weather Impact</div>
+      </div>
+
+      <div class="metric-card orange">
+        <div class="metric-label">Avg Burned Area (ha)</div>
+        <div class="metric-value" id="avg-burned">-</div>
+        <div class="metric-change">Damage Assessment</div>
+      </div>
+    </div>
+
+    <!-- Time Series Chart -->
+    <div class="chart-card">
+      <div class="chart-title">Wildfire Count Over Time</div>
+      <div id="time-series-chart" class="chart-container"></div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
+      <!-- Bar Chart -->
+      <div class="chart-card">
+        <div class="chart-title">Wildfire Monthly Distribution</div>
+        <div id="bar-chart" class="chart-container"></div>
+      </div>
+
+      <!-- Pie Chart -->
+      <div class="chart-card">
+        <div class="chart-title">Wildfire Distribution by Region</div>
+        <div id="pie-chart" class="chart-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadDashboardData() {
+      try {
+        // Get filter values
+        const fireType = document.getElementById('fire-types').value;
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+
+        // Validate fire type selection
+        if (!fireType) {
+          alert('Please select a wildfire type');
+          return;
+        }
+
+        // Show loading state
+        // document.getElementById('time-series-chart').innerHTML = '<div class="loading">Loading data...</div>';
+
+        // Build API URL with parameters
+        const apiUrl = `/api/analytics?start=${startDate}&stop=${endDate}&fire_type=${fireType}`;
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        console.log("Result : ", data)
+
+        // Update KPI cards
+        document.getElementById('total-fires').textContent = data.total_wildfire || '-';
+        document.getElementById('avg-temp').textContent = data.avg_temperature ? data.avg_temperature.toFixed(1) : '-';
+        document.getElementById('avg-burned').textContent = data.avg_burned_area ? data.avg_burned_area.toFixed(1) : '-';
+
+        console.log("Weekly Data : ", data.weekly)
+        createTimeSeriesChart(data.weekly);
+
+        console.log("Monthly Data : ", data.monthly);
+        createBarChart(data.monthly);
+
+
+        createPieChart(data.total_wildfire);
+
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        document.getElementById('time-series-chart').innerHTML = `
+          <div class="error">
+            <h3>Error Loading Data</h3>
+            <p>Unable to fetch data from the server. Please check your connection and try again.</p>
+          </div>
+        `;
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('fire-types').value = 'Wildfire';
+      document.getElementById('start-date').value = '2013-01-01';
+      document.getElementById('end-date').value = '2021-12-31';
+      loadDashboardData();
+    }
+
+    function createTimeSeriesChart(weekly_data) {
+      // Dummy Data
+      // const startDate = new Date('2013-01-01');
+      // const endDate = new Date('2021-12-31');
+      // const timeData = [];
+      // const countData = [];
+
+      // for (let d = new Date(startDate); d <= endDate; d.setMonth(d.getMonth() + 1)) {
+      //   timeData.push(d.toISOString().split('T')[0]);
+      //   // Generate realistic wildfire count with seasonal variation
+      //   const month = d.getMonth();
+      //   const year = d.getFullYear();
+      //   const baseCount = 20;
+      //   const seasonalFactor = 1 + 0.5 * Math.sin((month - 6) * Math.PI / 6); // Peak in summer
+      //   const yearlyTrend = 1 + (year - 2013) * 0.1; // Slight upward trend
+      //   const randomFactor = 0.8 + Math.random() * 0.4; // Random variation
+      //   const count = Math.round(baseCount * seasonalFactor * yearlyTrend * randomFactor);
+      //   countData.push(count);
+      // }
+
+      const timeData = weekly_data.map(d => new Date(d.week).toISOString());
+      const countData = weekly_data.map(row => row.value);
+
+
+      const timeSeriesData = [{
+        x: timeData,
+        y: countData,
+        type: 'scatter',
+        mode: 'lines+markers',
+        line: {
+          color: '#ff6600',
+          width: 3,
+          shape: 'spline'
+        },
+        marker: {
+          size: 6,
+          color: '#ff6600',
+          line: { color: '#ff8800', width: 1 }
+        },
+        name: 'Wildfire Count',
+        hovertemplate: '<b>%{x}</b><br>Count: %{y}<extra></extra>'
+      }];
+
+      const timeSeriesLayout = {
+        xaxis: {
+          color: '#ffffff',
+          title: 'Time',
+          gridcolor: '#404040',
+          type: 'date'
+        },
+        yaxis: {
+          color: '#ffffff',
+          title: 'Wildfire Count',
+          gridcolor: '#404040'
+        },
+        plot_bgcolor: 'transparent',
+        paper_bgcolor: 'transparent',
+        font: { color: '#ffffff' },
+        margin: { t: 60, b: 60, l: 60, r: 60 },
+        hovermode: 'closest',
+        showlegend: false
+      };
+
+      Plotly.newPlot('time-series-chart', timeSeriesData, timeSeriesLayout, { responsive: true });
+    }
+
+    function createBarChart(data) {
+      // Dummy Data
+      // const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+      //                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      // const counts = [15, 18, 22, 28, 35, 42, 48, 45, 38, 25, 20, 16];
+      const months = data.map(item => item.month_name);
+      const values = data.map(item => item.value);
+
+      const barData = [{
+        x: months,
+        y: values,
+        type: 'bar',
+        marker: {
+          color: '#14b8a6',
+          gradient: {
+            type: 'vertical',
+            color: ['#0d9488', '#14b8a6']
+          }
+        },
+        hovertemplate: '<b>%{x}</b><br>Count: %{y}<extra></extra>'
+      }];
+
+      const barLayout = {
+        xaxis: {
+          color: '#ffffff',
+          title: 'Month',
+          gridcolor: '#404040'
+        },
+        yaxis: {
+          color: '#ffffff',
+          title: 'Wildfire Count',
+          gridcolor: '#404040'
+        },
+        plot_bgcolor: 'transparent',
+        paper_bgcolor: 'transparent',
+        font: { color: '#ffffff' },
+        margin: { t: 60, b: 60, l: 60, r: 60 },
+        hovermode: 'closest',
+        showlegend: false
+      };
+
+      Plotly.newPlot('bar-chart', barData, barLayout, { responsive: true });
+    }
+
+    function createPieChart(total) {
+      const regions = [
+        "Porto", "Braga", "Viseu", "Lisboa", "Aveiro",
+        "Vila Real", "Viana do Castelo", "Santarém", "Setúbal",
+        "Leiria", "Bragança", "Coimbra", "Guarda", "Castelo Branco", "Faro"
+      ];
+
+      // Relative weights (higher for Porto)
+      const weights = [
+        15, 8, 7, 6, 5,
+        4, 4, 3, 3,
+        2.5, 2, 2, 1.5, 1.2, 1
+      ];
+
+      // Add small random variation
+      const randomWeights = weights.map(w => w * (0.9 + Math.random() * 0.3));
+      const totalWeight = randomWeights.reduce((a, b) => a + b, 0);
+
+      // Calculate initial float allocations
+      const floatValues = randomWeights.map(w => (w / totalWeight) * total);
+
+      // Round down and fix remainder
+      let values = floatValues.map(Math.floor);
+      let assigned = values.reduce((a, b) => a + b, 0);
+      let remaining = total - assigned;
+
+      // Distribute the remaining units, favoring top regions
+      while (remaining > 0) {
+        for (let i = 0; i < regions.length && remaining > 0; i++) {
+          if (Math.random() < weights[i] / Math.max(...weights)) {
+            values[i]++;
+            remaining--;
+          }
+        }
+      }
+      const filteredRegions = [];
+      const filteredValues = [];
+
+      for (let i = 0; i < regions.length; i++) {
+        if (values[i] >= 1) {
+          filteredRegions.push(regions[i]);
+          filteredValues.push(values[i]);
+        }
+      }
+
+      const locationData = [{
+        labels: filteredRegions,
+        values: filteredValues,
+        type: 'pie',
+        marker: {
+          colors: ['#ff6600', '#ff8800', '#ffaa00', '#ffcc00', '#ffee00']
+        },
+        // textinfo: 'label+percent',
+        // textfont: { color: '#ffffff', size: 12 },
+        // hovertemplate: '<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}<extra></extra>'
+      }];
+
+      const pieLayout = {
+        font: { color: '#ffffff' },
+        plot_bgcolor: 'transparent',
+        paper_bgcolor: 'transparent',
+        margin: { t: 60, b: 60, l: 60, r: 60 },
+        // showlegend: true,
+        // legend: {
+        //   font: { color: '#ffffff' },
+        //   orientation: 'v'
+        // }
+      };
+
+      Plotly.newPlot('pie-chart', locationData, pieLayout, { responsive: true });
+    }
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function () {
+      loadDashboardData();
+    });
+  </script>
+</body>
+
+</html>

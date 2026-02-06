@@ -1,0 +1,91 @@
+volumes:
+  shared-token:
+
+
+services:
+  kafka-sender:
+    image: golang:tip-alpine
+    container_name: kafka-sender
+    environment:
+      - CSV_PATH=/Data_Preprocess/ICNF_2013_2022_cleaned.csv
+    command: [ "go", "run", "/app/DT.go", "${START_DATE}", "${TIME_SPEED}" ]
+    volumes:
+      - ./kafka-sender:/app
+      - ../Data_Preprocess:/Data_Preprocess
+    working_dir: /app
+    depends_on:
+      - kafka
+      - influxdb
+
+  kafka-consumer:
+    image: golang:tip-alpine
+    container_name: kafka-consumer
+    command: [ "sh", "-c", "go run /app/consumer.go" ]
+    volumes:
+      - ./kafka-consumer:/app
+      - shared-token:/shared
+    working_dir: /app
+    depends_on:
+      - influxdb
+      - kafka
+
+  visualization:
+    image: python:3.13
+    container_name: visualization
+    command: [ "sh", "-c", "pip install -r /app/requirements.txt && python /app/app.py" ]
+    environment:
+      - TIME_SPEED=${TIME_SPEED}
+    volumes:
+      - ./visualization:/app
+      - shared-token:/shared
+    working_dir: /app
+    ports:
+      - "8050:8050"
+    depends_on:
+      - influxdb
+      - kafka
+
+  ai-model:
+    image: python:3.13
+    container_name: ai-model
+    command: [ "sh", "-c", "pip install -r /app/requirements.txt && python /app/app.py" ]
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./ai-model:/app
+      - shared-token:/shared
+    working_dir: /app
+    depends_on:
+      - influxdb
+      - kafka
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka
+    environment:
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_NODE_ID=1
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - shared-token:/shared
+      - ./init-influxdb.sh:/init-influxdb.sh
+    environment:
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=adminpassword
+      - INFLUXDB_ORG=UvA
+      - INFLUXDB_BUCKET=wildfire_bucket
+    entrypoint: [ "sh", "-c", "apt-get update && apt-get install -y jq && sh /init-influxdb.sh" ]

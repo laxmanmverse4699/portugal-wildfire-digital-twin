@@ -1,0 +1,8 @@
+influxdb-client[ciso]
+dash
+polars
+dash-leaflet
+numpy
+pandas
+pyarrow
+kafka-python
