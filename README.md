@@ -1,4 +1,4 @@
-# UvA_DT_GroupN_PTWildfires
+# Digital Twin for Portugal Wildfire
 
 Digital Twin group project at UvA Computer Science Master's
 
